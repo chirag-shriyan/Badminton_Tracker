@@ -1,39 +1,93 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+import useAuthStore from "@/store/AuthStore";
+import useGlobalStateStore from "@/store/GlobalStateStore";
+import useNetInfoStore from "@/store/NetInfo";
+import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+    const { user, getUser, checkIsAdmin, isAdmin, isLoggedIn } = useAuthStore();
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    const { isInternetConnected, checkInternetConnection } = useNetInfoStore();
 
-  if (!loaded) {
-    return null;
-  }
+    const { isLoading, setLoading } = useGlobalStateStore();
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+    // useEffect(() => {
+    //     if (isInternetConnected) {
+    //         const unsub = getUser();
+    //         user && checkIsAdmin();
+    //         if (isAdmin !== null && isLoggedIn === true) {
+    //             setLoading(false);
+    //         } else if (isLoggedIn === false) {
+    //             setLoading(false);
+    //         }
+    //         return () => unsub && unsub();
+    //     } else {
+    //         setLoading(false);
+    //     }
+    // }, [isInternetConnected, user, isAdmin, isLoggedIn]);
+
+    useEffect(() => {
+        checkInternetConnection();
+    }, []);
+
+    useEffect(() => {
+        const unsub = getUser();
+        user && checkIsAdmin();
+        if (isAdmin !== null && isLoggedIn === true) {
+            setLoading(false);
+        } else if (isLoggedIn === false) {
+            setLoading(false);
+        }
+        return () => unsub && unsub();
+    }, [isInternetConnected, user, isAdmin, isLoggedIn]);
+
+    return (
+        <>
+            <Stack>
+                <Stack.Screen
+                    name="loading"
+                    options={{ headerShown: false }}
+                    redirect={!isLoading}
+                />
+
+                <Stack.Screen
+                    name="login"
+                    options={{ headerShown: false }}
+                    redirect={isLoggedIn || isLoading}
+                />
+                <Stack.Screen
+                    name="signup"
+                    options={{ headerShown: false }}
+                    redirect={isLoggedIn || isLoading}
+                />
+
+                <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                    redirect={!isLoggedIn || isLoading}
+                />
+                <Stack.Screen
+                    name="(admin)"
+                    options={{ headerShown: false }}
+                    redirect={!isLoggedIn || !isAdmin || isLoading}
+                />
+                <Stack.Screen
+                    name="player/[id]"
+                    options={{ headerShown: false }}
+                    redirect={!isLoggedIn || isLoading}
+                />
+                <Stack.Screen
+                    name="match/[id]"
+                    options={{ headerShown: false }}
+                    redirect={!isLoggedIn || isLoading}
+                />
+                <Stack.Screen
+                    name="edit_player/[id]"
+                    options={{ headerShown: false }}
+                    redirect={!isLoggedIn || isLoading}
+                />
+            </Stack>
+        </>
+    );
 }

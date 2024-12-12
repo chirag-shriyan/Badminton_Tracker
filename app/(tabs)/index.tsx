@@ -1,74 +1,215 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { useEffect, useState } from "react";
+import {
+    View,
+    Text,
+    StyleSheet,
+    TextInput,
+    Pressable,
+    ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { router } from "expo-router";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { Colors } from "@/constants/Colors";
+import useThemeStore from "@/store/ThemeStore";
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
+import useNetInfoStore from "@/store/NetInfo";
+import usePlayerStore from "@/store/PlayerStore";
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+const Home = () => {
+    const { isInternetConnected } = useNetInfoStore();
+
+    const { PlayersDataLoading, setPlayersDataLoading, getPlayersData } =
+        usePlayerStore();
+
+    const InitialPlayersData = usePlayerStore().PlayersData;
+    const [PlayersData, setPlayersData] = useState(InitialPlayersData);
+
+    const { Theme } = useThemeStore();
+    const theme = Theme === "Dark" ? Colors.dark : Colors.light;
+    const styles = generateStyles(theme);
+
+    function PlayerSearch(value: string) {
+        if (value.trim() !== "") {
+            const filteredData = PlayersData.filter((player) =>
+                player.name.toLowerCase().includes(value.toLowerCase())
+            );
+            setPlayersData(filteredData);
+        } else {
+            setPlayersData(InitialPlayersData);
+        }
+    }
+
+    useEffect(() => {
+        if (isInternetConnected) {
+            getPlayersData();
+            setPlayersDataLoading(true);
+        } else {
+            alert("No internet connection");
+        }
+    }, [isInternetConnected]);
+
+    useEffect(() => {
+        setPlayersData(InitialPlayersData);
+    }, [InitialPlayersData]);
+
+    return (
+        <SafeAreaView
+            style={{
+                backgroundColor: theme.background,
+                flex: 1,
+            }}
+        >
+            <StatusBar style={Theme === "Dark" ? "light" : "dark"} />
+            <ScrollView keyboardShouldPersistTaps="always">
+                <View
+                    style={{
+                        flex: 1,
+                        paddingTop: 20,
+                        paddingHorizontal: 10,
+                        backgroundColor: theme.background,
+                    }}
+                >
+                    <View>
+                        <Text
+                            style={{
+                                fontSize: 25,
+                                fontWeight: "900",
+                                marginBottom: 10,
+                                color: theme.text,
+                            }}
+                        >
+                            {isInternetConnected
+                                ? "Ranking"
+                                : "Ranking(Offline)"}
+                        </Text>
+
+                        <TextInput
+                            style={styles.playerSearch}
+                            placeholder="Enter player name"
+                            placeholderTextColor={"gray"}
+                            onChangeText={PlayerSearch}
+                        />
+                    </View>
+
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            paddingHorizontal: 10,
+                            marginTop: 10,
+                            marginBottom: 10,
+                        }}
+                    >
+                        <Text style={styles.rankingCell}>#</Text>
+                        <Text style={styles.nameCell}>Name</Text>
+                        <Text style={styles.pointsCell}>Points</Text>
+                        <Text style={styles.totalMatchCell}>Total Match</Text>
+                    </View>
+                </View>
+
+                <View>
+                    {PlayersData.length > 0 ? (
+                        PlayersData.map((player) => {
+                            return (
+                                <Pressable
+                                    key={player.playerId}
+                                    style={styles.rankingContainer}
+                                    onPress={() =>
+                                        router.push(
+                                            `/player/${player.playerId}`
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.rankingCell}>
+                                        {player.rank}.
+                                    </Text>
+                                    <Text style={styles.nameCell}>
+                                        {player.name}
+                                    </Text>
+                                    <Text style={styles.pointsCell}>
+                                        {player.points}
+                                    </Text>
+                                    <Text style={styles.totalMatchCell}>
+                                        {player.totalMatch}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })
+                    ) : PlayersDataLoading ? (
+                        <Text
+                            style={{
+                                marginVertical: 20,
+                                textAlign: "center",
+                                color: theme.text,
+                            }}
+                        >
+                            Loading...
+                        </Text>
+                    ) : (
+                        <Text
+                            style={{
+                                marginVertical: 20,
+                                textAlign: "center",
+                                color: theme.text,
+                            }}
+                        >
+                            No Players Data
+                        </Text>
+                    )}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
+};
+
+export default Home;
+
+const generateStyles = (theme: typeof Colors.dark | typeof Colors.light) => {
+    return StyleSheet.create({
+        playerSearch: {
+            borderWidth: 2,
+            borderColor: theme.borderColor,
+            borderRadius: 10,
+            padding: 10,
+            color: theme.text,
+        },
+        rankingContainer: {
+            flex: 1,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 10,
+            paddingHorizontal: 20,
+        },
+        rankingCell: {
+            width: "10%",
+            marginRight: 5,
+            fontSize: 12,
+            fontWeight: "bold",
+            color: theme.text,
+        },
+        nameCell: {
+            width: "40%",
+            marginRight: 5,
+            fontSize: 12,
+            fontWeight: "bold",
+            color: theme.text,
+        },
+        pointsCell: {
+            width: "20%",
+            marginRight: 5,
+            fontSize: 12,
+            fontWeight: "bold",
+            textAlign: "center",
+            color: theme.text,
+        },
+        totalMatchCell: {
+            width: "20%",
+            fontSize: 12,
+            fontWeight: "bold",
+            textAlign: "center",
+            color: theme.text,
+        },
+    });
+};
