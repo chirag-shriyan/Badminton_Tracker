@@ -6,7 +6,7 @@ import { Colors } from "@/constants/Colors";
 import useThemeStore from "@/store/ThemeStore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import useMatchHistoryStore, {
-    MatHistoryDataType,
+    MatchHistoryDataType,
 } from "@/store/MatchHistoryStore";
 
 const MatchHistory = () => {
@@ -15,16 +15,24 @@ const MatchHistory = () => {
     const styles = generateStyles(theme);
 
     const { isInternetConnected } = useNetInfoStore();
-    const { isMatchDataLoading, MatchHistoryData, getMatchHistoryData } =
-        useMatchHistoryStore();
+    const {
+        isMatchDataLoading,
+        MatchHistoryData,
+        getMatchHistoryData,
+        getMatchHistoryDataOffline,
+    } = useMatchHistoryStore();
 
     useEffect(() => {
-        getMatchHistoryData();
-    }, []);
+        if (isInternetConnected) {
+            getMatchHistoryData();
+        } else if (isInternetConnected === false) {
+            getMatchHistoryDataOffline();
+        }
+    }, [isInternetConnected]);
 
     return (
         <SafeAreaView style={{ backgroundColor: theme.background, flex: 1 }}>
-            <View style={{ flex: 1 }}>
+            <ScrollView>
                 <View
                     style={{
                         paddingVertical: 20,
@@ -40,114 +48,109 @@ const MatchHistory = () => {
                     >
                         {isInternetConnected
                             ? "Match History"
-                            : "Match History(Offline)"}
+                            : "Match History (Offline)"}
                     </Text>
                 </View>
 
-                <ScrollView>
-                    {MatchHistoryData.length > 0 ? (
-                        MatchHistoryData.map((match: MatHistoryDataType) => {
-                            return (
-                                <Pressable
-                                    key={match.matchId}
-                                    style={styles.matchContainer}
-                                    onPress={() =>
-                                        router.push(`/match/${match.matchId}`)
-                                    }
-                                >
-                                    <View style={{ flexDirection: "row" }}>
-                                        <Text
-                                            style={{
-                                                ...styles.fontStyle,
-                                                color: match.player1.isWinner
-                                                    ? "green"
-                                                    : "red",
-                                            }}
-                                        >
-                                            {match.player1.name} (
-                                            {match.player1.matchPoints})
-                                        </Text>
-
-                                        <Text style={styles.fontStyle}>
-                                            {" "}
-                                            /{" "}
-                                        </Text>
-
-                                        <Text
-                                            style={{
-                                                ...styles.fontStyle,
-                                                color: match.player2.isWinner
-                                                    ? "green"
-                                                    : "red",
-                                            }}
-                                        >
-                                            {match.player2.name} (
-                                            {match.player2.matchPoints})
-                                        </Text>
-                                    </View>
-
-                                    <View style={{ flexDirection: "row" }}>
-                                        <Text
-                                            style={{
-                                                ...styles.fontStyle,
-                                                color: match.player1.isWinner
-                                                    ? "green"
-                                                    : "red",
-                                            }}
-                                        >
-                                            {match.player1.isWinner ? "W" : "L"}
-                                        </Text>
-
-                                        <Text style={styles.fontStyle}>
-                                            {" "}
-                                            /{" "}
-                                        </Text>
-
-                                        <Text
-                                            style={{
-                                                ...styles.fontStyle,
-                                                color: match.player2.isWinner
-                                                    ? "green"
-                                                    : "red",
-                                            }}
-                                        >
-                                            {match.player2.isWinner ? "W" : "L"}
-                                        </Text>
-                                    </View>
-                                </Pressable>
-                            );
-                        })
-                    ) : isMatchDataLoading ? (
-                        <View style={{ flex: 1, justifyContent: "center" }}>
-                            <Text
+                {MatchHistoryData.length > 0 && !isMatchDataLoading ? (
+                    MatchHistoryData.map((match: MatchHistoryDataType) => {
+                        return (
+                            <Pressable
+                                key={match.matchId}
                                 style={{
-                                    flex: 1,
-                                    textAlignVertical: "center",
-                                    textAlign: "center",
-                                    fontSize: 20,
-                                    color: theme.text,
+                                    ...styles.matchContainer,
+                                    opacity: match.isDataLocal ? 0.5 : 1,
                                 }}
+                                onPress={() =>
+                                    router.push(`/match/${match.matchId}`)
+                                }
                             >
-                                Loading...
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={{ flex: 1, justifyContent: "center" }}>
-                            <Text
-                                style={{
-                                    flex: 1,
-                                    textAlignVertical: "center",
-                                    textAlign: "center",
-                                    fontSize: 20,
-                                    color: theme.text,
-                                }}
-                            >
-                                Nothing To Show Here
-                            </Text>
-                        </View>
-                    )}
-                </ScrollView>
-            </View>
+                                <View style={{ flexDirection: "row" }}>
+                                    <Text
+                                        style={{
+                                            ...styles.fontStyle,
+                                            color: match.player1.isWinner
+                                                ? "green"
+                                                : "red",
+                                        }}
+                                    >
+                                        {match.player1.name} (
+                                        {match.player1.matchPoints})
+                                    </Text>
+
+                                    <Text style={styles.fontStyle}> / </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.fontStyle,
+                                            color: match.player2.isWinner
+                                                ? "green"
+                                                : "red",
+                                        }}
+                                    >
+                                        {match.player2.name} (
+                                        {match.player2.matchPoints})
+                                    </Text>
+                                </View>
+
+                                <View style={{ flexDirection: "row" }}>
+                                    <Text
+                                        style={{
+                                            ...styles.fontStyle,
+                                            color: match.player1.isWinner
+                                                ? "green"
+                                                : "red",
+                                        }}
+                                    >
+                                        {match.player1.isWinner ? "W" : "L"}
+                                    </Text>
+
+                                    <Text style={styles.fontStyle}> / </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.fontStyle,
+                                            color: match.player2.isWinner
+                                                ? "green"
+                                                : "red",
+                                        }}
+                                    >
+                                        {match.player2.isWinner ? "W" : "L"}
+                                    </Text>
+                                </View>
+                            </Pressable>
+                        );
+                    })
+                ) : isMatchDataLoading ? (
+                    <View style={{ flex: 1, justifyContent: "center" }}>
+                        <Text
+                            style={{
+                                flex: 1,
+                                textAlignVertical: "center",
+                                textAlign: "center",
+                                fontSize: 20,
+                                color: theme.text,
+                            }}
+                        >
+                            Loading...
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={{ flex: 1, justifyContent: "center" }}>
+                        <Text
+                            style={{
+                                flex: 1,
+                                textAlignVertical: "center",
+                                textAlign: "center",
+                                fontSize: 20,
+                                color: theme.text,
+                            }}
+                        >
+                            Nothing To Show Here
+                        </Text>
+                    </View>
+                )}
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -164,7 +167,7 @@ const generateStyles = (theme: typeof Colors.dark | typeof Colors.light) => {
             borderWidth: 2,
             borderColor: theme.borderColor,
             borderRadius: 10,
-            marginBottom: 10,
+            marginBottom: 15,
         },
         fontStyle: {
             fontSize: 13,

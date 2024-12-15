@@ -9,9 +9,9 @@
         "userInterfaceStyle": "automatic",
         "newArchEnabled": true,
         "splash": {
-            "image": "./assets/images/splash.png",
+            "image": "./assets/images/icon.png",
             "resizeMode": "contain",
-            "backgroundColor": "#FFFFFF"
+            "backgroundColor": "#ffffff"
         },
         "ios": {
             "supportsTablet": true
@@ -25,12 +25,27 @@
         },
         "web": {
             "bundler": "metro",
-            "output": "",
+            "output": "static",
             "favicon": "./assets/images/favicon.png"
         },
         "plugins": [
             "expo-router",
-            "expo-secure-store"
+            [
+                "expo-sqlite",
+                {
+                    "enableFTS": true,
+                    "useSQLCipher": true,
+                    "android": {
+                        "enableFTS": false,
+                        "useSQLCipher": false
+                    },
+                    "ios": {
+                        "customBuildFlags": [
+                            "-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"
+                        ]
+                    }
+                }
+            ]
         ],
         "experiments": {
             "typedRoutes": true

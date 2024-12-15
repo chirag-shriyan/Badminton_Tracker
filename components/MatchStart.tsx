@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import useGlobalStateStore from "@/store/GlobalStateStore";
 import Loading from "@/app/loading";
 import { router } from "expo-router";
+import useNetInfoStore from "@/store/NetInfo";
 
 const MatchStart = () => {
     const { Theme } = useThemeStore();
@@ -16,6 +17,7 @@ const MatchStart = () => {
     const styles = generateStyles(theme);
 
     const { isLoading, setLoading } = useGlobalStateStore();
+    const { isInternetConnected } = useNetInfoStore();
 
     const {
         isMatchCompleted,
@@ -28,6 +30,7 @@ const MatchStart = () => {
         ResetMatch,
         EndMatch,
         CompleteMatch,
+        CompleteMatchOffline,
     } = useCreateMatchStore();
 
     useEffect(() => {
@@ -46,10 +49,19 @@ const MatchStart = () => {
         RemovePoints(player);
     }
     async function handleCompleteMatch() {
-        setLoading(true);
-        await CompleteMatch();
-        setLoading(false);
-        router.replace("/");
+        if (isInternetConnected) {
+            setLoading(true);
+            await CompleteMatch();
+            setLoading(false);
+            router.replace("/");
+        } else if (isInternetConnected === false) {
+            setLoading(true);
+            CompleteMatchOffline();
+            setTimeout(function () {
+                setLoading(false);
+            }, 100);
+            router.replace("/");
+        }
     }
 
     return !isLoading ? (

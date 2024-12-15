@@ -12,6 +12,7 @@ import { Colors } from "@/constants/Colors";
 import useThemeStore from "@/store/ThemeStore";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import useNetInfoStore from "@/store/NetInfo";
 
 const Login = () => {
     const { login } = useAuthStore();
@@ -21,6 +22,16 @@ const Login = () => {
     const { Theme } = useThemeStore();
     const theme = Theme === "Dark" ? Colors.dark : Colors.light;
     const styles = generateStyles(theme);
+
+    const { isInternetConnected } = useNetInfoStore();
+
+    function handleLogin(email: string, password: string) {
+        if (isInternetConnected) {
+            login(email, password);
+        } else {
+            alert("No internet connection");
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -55,7 +66,7 @@ const Login = () => {
 
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => login(email, password)}
+                onPress={() => handleLogin(email, password)}
             >
                 <Text
                     style={{

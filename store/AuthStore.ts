@@ -1,4 +1,5 @@
 import { auth, db } from "@/constants/firebase";
+import Local_DB from "@/constants/Local_DB";
 import { router } from "expo-router";
 import {
     onAuthStateChanged,
@@ -24,6 +25,7 @@ interface AuthStoreType {
     logout: () => void;
 
     // Offline mode
+    getUserOffline: () => void;
 }
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
@@ -33,14 +35,14 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     getUser: () => {
         return onAuthStateChanged(auth, (user) => {
             if (user) {
-                set(() => ({ user: user }));
-                set(() => ({ isLoggedIn: true }));
+                set(() => ({ user: user, isLoggedIn: true }));
+                Local_DB.setItem("user", JSON.stringify(user));
             } else {
-                set(() => ({ user: null }));
-                set(() => ({ isLoggedIn: false }));
+                set(() => ({ user: null, isLoggedIn: false }));
             }
         });
     },
+
     checkIsAdmin: async () => {
         const user = get().user;
         if (user) {
@@ -49,6 +51,7 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
                 const docSnap = await getDoc(usersRef);
                 if (docSnap.exists()) {
                     set(() => ({ isAdmin: true }));
+                    Local_DB.setItem("isAdmin", JSON.stringify(true));
                 }
             } catch (error) {
                 console.log(error);
@@ -66,8 +69,8 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
                 );
 
                 if (user) {
-                    set(() => ({ user: user.user }));
-                    set(() => ({ isLoggedIn: true }));
+                    set(() => ({ user: user.user, isLoggedIn: true }));
+                    Local_DB.setItem("user", JSON.stringify(user));
 
                     router.replace("/");
                 }
@@ -95,8 +98,8 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
                 await updateProfile(user.user, { displayName: username });
 
                 if (user) {
-                    set(() => ({ user: auth.currentUser }));
-                    set(() => ({ isLoggedIn: true }));
+                    set(() => ({ user: auth.currentUser, isLoggedIn: true }));
+                    Local_DB.setItem("user", JSON.stringify(auth.currentUser));
 
                     router.replace("/");
                 }
@@ -114,14 +117,29 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     logout: async () => {
         try {
             await signOut(auth);
+            Local_DB.deleteItem("user");
 
-            set(() => ({ user: null }));
-            set(() => ({ isAdmin: false }));
-            set(() => ({ isLoggedIn: false }));
+            set(() => ({ user: null, isAdmin: false, isLoggedIn: false }));
 
             router.replace("/login");
         } catch (error) {
             alert(error);
+        }
+    },
+
+    // Offline Mode
+
+    getUserOffline: () => {
+        let localUser: any = Local_DB.getItem("user");
+        let localIsAdmin: any = Local_DB.getItem("isAdmin");
+        if (localUser) {
+            localUser = JSON.parse(localUser);
+            localIsAdmin = localIsAdmin && JSON.parse(localIsAdmin);
+
+            localIsAdmin && set(() => ({ isAdmin: localIsAdmin }));
+            set(() => ({ user: localUser, isLoggedIn: true }));
+        } else {
+            set(() => ({ user: null, isLoggedIn: false }));
         }
     },
 }));

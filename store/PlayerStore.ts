@@ -1,8 +1,19 @@
 import { create } from "zustand";
-import { collection, deleteDoc, doc, getDocs, query, setDoc, Timestamp, updateDoc, where } from "firebase/firestore";
+import {
+    collection,
+    deleteDoc,
+    doc,
+    getDocs,
+    query,
+    setDoc,
+    Timestamp,
+    updateDoc,
+    where,
+} from "firebase/firestore";
 import { db } from "@/constants/firebase";
 import { Alert } from "react-native";
 import * as Crypto from "expo-crypto";
+import Local_DB from "@/constants/Local_DB";
 
 interface PlayerDataType {
     playerId: string;
@@ -28,8 +39,8 @@ interface PlayerStoreType {
     editPlayer: (player: PlayerDataType) => void;
     removePlayer: (playerId: string) => void;
 
+    // Offline Mode
     getPlayersDataOffline: () => void;
-
 }
 
 const usePlayerStore = create<PlayerStoreType>((set, get) => ({
@@ -44,6 +55,7 @@ const usePlayerStore = create<PlayerStoreType>((set, get) => ({
 
     // getPlayersData to get all the player data from internet (requires internet)
     getPlayersData: async () => {
+        set(() => ({ PlayersDataLoading: true }));
         try {
             const dataRef = collection(db, "players");
             const querySnapshot = await getDocs(dataRef);
@@ -54,11 +66,15 @@ const usePlayerStore = create<PlayerStoreType>((set, get) => ({
                 players.push(data);
             });
 
-            players.sort((a: any, b: any) => b.points - a.points || a.updateAt - b.updateAt);
-            players.forEach((player, index) => player.rank = index + 1);
+            Local_DB.setItem("players", JSON.stringify(players));
 
-            set(() => ({ PlayersData: players }));
-            set(() => ({ PlayersDataLoading: false }));
+            players.sort(
+                (a: any, b: any) =>
+                    b.points - a.points || a.updateAt - b.updateAt
+            );
+            players.forEach((player, index) => (player.rank = index + 1));
+
+            set(() => ({ PlayersData: players, PlayersDataLoading: false }));
         } catch (error) {
             console.log(error);
         }
@@ -90,7 +106,6 @@ const usePlayerStore = create<PlayerStoreType>((set, get) => ({
                     await setDoc(doc(db, "players", playerId), player);
                     alert(`Player created with ID: ${playerId}`);
                     get().getPlayersData();
-
                 } else {
                     alert(`Player with the name "${name}" already exist`);
                 }
@@ -103,11 +118,12 @@ const usePlayerStore = create<PlayerStoreType>((set, get) => ({
     // getPlayer to player form PlayersData state
     getPlayer: (playerId: string) => {
         const PlayersData = get().PlayersData;
-        const player = PlayersData.find((player) => player.playerId === playerId);
+        const player = PlayersData.find(
+            (player) => player.playerId === playerId
+        );
         if (player) {
             return player;
-        }
-        else {
+        } else {
             return null;
         }
     },
@@ -128,30 +144,43 @@ const usePlayerStore = create<PlayerStoreType>((set, get) => ({
     // setPlayer to remove player from database (requires internet)
     removePlayer: async (playerId: string) => {
         try {
-            Alert.alert(
-                '',
-                "Are you sure you want to delete this player",
-                [
-                    { text: 'Cancel', onPress: () => { }, style: 'cancel' },
-                    {
-                        text: 'OK', onPress: async () => {
-                            await deleteDoc(doc(db, "players", playerId));
-                            get().getPlayersData();
-                        }
+            Alert.alert("", "Are you sure you want to delete this player", [
+                { text: "Cancel", onPress: () => {}, style: "cancel" },
+                {
+                    text: "OK",
+                    onPress: async () => {
+                        await deleteDoc(doc(db, "players", playerId));
+                        get().getPlayersData();
                     },
-                ],
-            )
-
+                },
+            ]);
         } catch (error) {
             console.log(error);
         }
     },
 
+    // Offline Mode
+
     // getPlayersDataOffline to get player from local database (offline mode)
     getPlayersDataOffline: async () => {
-    }
-}));
+        let players: any = Local_DB.getItem("players");
 
+        if (players) {
+            set(() => ({ PlayersDataLoading: true }));
+            players = JSON.parse(players);
+            players.sort(
+                (a: any, b: any) =>
+                    b.points - a.points || a.updateAt - b.updateAt
+            );
+            players.forEach(
+                (player: any, index: any) => (player.rank = index + 1)
+            );
+            set(() => ({ PlayersData: players, PlayersDataLoading: false }));
+        } else {
+            set(() => ({ PlayersData: [] }));
+        }
+    },
+}));
 
 export default usePlayerStore;
 export { PlayerDataType };

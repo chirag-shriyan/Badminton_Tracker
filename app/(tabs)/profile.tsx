@@ -1,14 +1,19 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import React from "react";
 import useAuthStore from "@/store/AuthStore";
 import { Colors } from "@/constants/Colors";
 import useThemeStore from "@/store/ThemeStore";
 import { SafeAreaView } from "react-native-safe-area-context";
 import useNetInfoStore from "@/store/NetInfo";
+import useMatchHistoryStore from "@/store/MatchHistoryStore";
+import useGlobalStateStore from "@/store/GlobalStateStore";
+import Loading from "../loading";
 
 const Profile = () => {
     const { user, isAdmin, logout } = useAuthStore();
     const { isInternetConnected } = useNetInfoStore();
+    const { SyncDatabase, isLocalData } = useMatchHistoryStore();
+    const { isLoading, setLoading } = useGlobalStateStore();
 
     const { Theme, setTheme } = useThemeStore();
     const theme = Theme === "Dark" ? Colors.dark : Colors.light;
@@ -21,8 +26,27 @@ const Profile = () => {
             alert("This action requires internet connection");
         }
     }
+    function handleSyncDatabase() {
+        if (isInternetConnected) {
+            Alert.alert("", "Are you sure you want to sync local data", [
+                { text: "Cancel", onPress: () => {}, style: "cancel" },
+                {
+                    text: "OK",
+                    onPress: async () => {
+                        setLoading(true);
+                        await SyncDatabase();
+                        setTimeout(function () {
+                            setLoading(false);
+                        }, 100);
+                    },
+                },
+            ]);
+        } else {
+            alert("This action requires internet connection");
+        }
+    }
 
-    return (
+    return !isLoading ? (
         <SafeAreaView style={styles.container}>
             <View style={{ flex: 1 }}>
                 <Text
@@ -83,6 +107,26 @@ const Profile = () => {
                     marginBottom: 20,
                 }}
             >
+                {isLocalData && (
+                    <TouchableOpacity
+                        style={{
+                            ...styles.button,
+                            marginBottom: 10,
+                            backgroundColor: "#ffbc11",
+                        }}
+                        onPress={handleSyncDatabase}
+                    >
+                        <Text
+                            style={{
+                                textAlign: "center",
+                                color: "white",
+                            }}
+                        >
+                            Sync Local Data
+                        </Text>
+                    </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                     style={{ ...styles.button }}
                     onPress={handleLogout}
@@ -98,6 +142,8 @@ const Profile = () => {
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
+    ) : (
+        <Loading />
     );
 };
 

@@ -42,6 +42,9 @@ const SelectPlayer = () => {
             playerId: Player.playerId,
             name: Player.name,
             currentPoints: Player.points,
+            totalMatch: Player.totalMatch,
+            totalWin: Player.totalWin,
+            totalLost: Player.totalLost,
             matchPoints: 0,
             isServing: false,
         };

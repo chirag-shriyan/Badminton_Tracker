@@ -15,23 +15,30 @@ import { Colors } from "@/constants/Colors";
 import useThemeStore from "@/store/ThemeStore";
 
 import useNetInfoStore from "@/store/NetInfo";
-import usePlayerStore from "@/store/PlayerStore";
+import usePlayerStore, { PlayerDataType } from "@/store/PlayerStore";
+import Local_DB from "@/constants/Local_DB";
 
 const Home = () => {
     const { isInternetConnected } = useNetInfoStore();
 
-    const { PlayersDataLoading, setPlayersDataLoading, getPlayersData } =
-        usePlayerStore();
+    const {
+        PlayersDataLoading,
+        setPlayersDataLoading,
+        getPlayersData,
+        getPlayersDataOffline,
+    } = usePlayerStore();
 
     const InitialPlayersData = usePlayerStore().PlayersData;
-    const [PlayersData, setPlayersData] = useState(InitialPlayersData);
+    const [PlayersData, setPlayersData] = useState<PlayerDataType[] | null>(
+        null
+    );
 
     const { Theme } = useThemeStore();
     const theme = Theme === "Dark" ? Colors.dark : Colors.light;
     const styles = generateStyles(theme);
 
     function PlayerSearch(value: string) {
-        if (value.trim() !== "") {
+        if (value.trim() !== "" && PlayersData) {
             const filteredData = PlayersData.filter((player) =>
                 player.name.toLowerCase().includes(value.toLowerCase())
             );
@@ -45,13 +52,17 @@ const Home = () => {
         if (isInternetConnected) {
             getPlayersData();
             setPlayersDataLoading(true);
-        } else {
-            alert("No internet connection");
+        } else if (isInternetConnected === false) {
+            getPlayersDataOffline();
+            setPlayersDataLoading(true);
         }
     }, [isInternetConnected]);
 
     useEffect(() => {
         setPlayersData(InitialPlayersData);
+        if (PlayersData !== null) {
+            setPlayersDataLoading(false);
+        }
     }, [InitialPlayersData]);
 
     return (
@@ -82,7 +93,7 @@ const Home = () => {
                         >
                             {isInternetConnected
                                 ? "Ranking"
-                                : "Ranking(Offline)"}
+                                : "Ranking (Offline)"}
                         </Text>
 
                         <TextInput
@@ -110,7 +121,9 @@ const Home = () => {
                 </View>
 
                 <View>
-                    {PlayersData.length > 0 ? (
+                    {PlayersData &&
+                    PlayersData.length > 0 &&
+                    !PlayersDataLoading ? (
                         PlayersData.map((player) => {
                             return (
                                 <Pressable
